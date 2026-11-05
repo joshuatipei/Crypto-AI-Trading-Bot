@@ -1,0 +1,4 @@
+# Replace with your owned domain. Keep port 8080 inaccessible from the Internet.
+paper.example.com {
+    reverse_proxy 127.0.0.1:8080
+}

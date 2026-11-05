@@ -1,0 +1,25 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>XRP Paper Desk</title>
+<style>
+:root{color-scheme:dark;font:16px system-ui;background:#0c1420;color:#e7edf8}body{max-width:1100px;margin:auto;padding:24px}header{display:flex;justify-content:space-between;align-items:center;gap:12px}h1{font-size:24px}.badge{color:#73efc4;background:#163c35;padding:8px;border-radius:8px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:24px 0}.card,section{background:#152133;border:1px solid #2a3c55;border-radius:12px;padding:18px}.label{color:#9cafca;font-size:14px}.value{font-size:26px;margin-top:9px}button{padding:14px 18px;border:0;border-radius:8px;background:#84b7ff;color:#10223e;font-weight:bold;cursor:pointer;margin:4px}.danger{background:#ff8e9d}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}table{width:100%;border-collapse:collapse;font-size:14px}td,th{text-align:left;padding:10px;border-bottom:1px solid #2a3c55}.scroll{overflow:auto}#status{color:#ffd58e}small{color:#9cafca}section{margin:16px 0}
+</style>
+<header><h1>XRP Paper Desk</h1><span class="badge">SIMULATED · $10,000</span></header>
+<p id="status">Waiting for a validated market-data cycle.</p><small>Research baselines • no live orders • signal conditions are not calibrated probabilities.</small>
+<div class="grid" id="cards"></div>
+<button onclick="control('pause')">Pause entries</button><button onclick="control('resume')">Resume entries</button><button class="danger" onclick="control('emergency')">Emergency stop</button>
+<p id="message" role="status"></p>
+<section><h2>Market evidence</h2><pre id="signal"></pre></section>
+<section><h2>Virtual trade history</h2><div class="scroll"><table><thead><tr><th>UTC</th><th>Side</th><th>XRP</th><th>Fill</th><th>Fee</th><th>P/L</th><th>Rationale</th></tr></thead><tbody id="trades"></tbody></table></div></section>
+<section><h2>Risk and operating events</h2><pre id="events"></pre></section>
+<script>
+const money=v=>Number.isFinite(v)?v.toLocaleString('en-US',{style:'currency',currency:'USD'}):'—';
+async function refresh(){try{let r=await fetch('/api/state');if(!r.ok)throw Error('Authentication or service unavailable');let s=await r.json(),a=s.account||{};
+document.getElementById('status').textContent=s.error|| (s.stale?'STALE / not running — entries require fresh data':a.halted?'HALTED — awaiting offline review':a.paused?'PAUSED — protective exits active':'PAPER RUNNING · '+(s.exchange||''));
+let items=[['XRP price',money(a.last_price)],['Virtual equity',money(s.equity)],['Available cash',money(a.cash)],['XRP holdings',a.quantity??0],['Daily P/L',money(s.daily_pnl)],['Cumulative P/L',money(s.cumulative_pnl)],['Drawdown',(s.drawdown_pct??0).toFixed(2)+'%'],['Open stop risk',money(s.open_risk)],['Protective stop',a.stop?money(a.stop):'—'],['Win rate',s.win_rate==null?'—':(s.win_rate*100).toFixed(1)+'%'],['Open IOC orders',(s.open_orders||[]).length],['Regime',s.signal?.regime||'warming up']];
+let root=document.getElementById('cards');root.replaceChildren();for(let [k,v] of items){let c=document.createElement('div');c.className='card';let l=document.createElement('div');l.className='label';l.textContent=k;let val=document.createElement('div');val.className='value';val.textContent=v;c.append(l,val);root.append(c)}
+document.getElementById('signal').textContent=JSON.stringify(s.signal||{reason:'No live data yet'},null,2);
+let rows=document.getElementById('trades');rows.replaceChildren();for(let t of (a.trades||[]).slice(-50).reverse()){let tr=document.createElement('tr');for(let v of [new Date(t.timestamp*1000).toISOString(),t.side,t.quantity.toFixed(6),money(t.price),money(t.fee),money(t.pnl),t.reason]){let td=document.createElement('td');td.textContent=v;tr.append(td)}rows.append(tr)}
+document.getElementById('events').textContent=JSON.stringify((a.events||[]).slice(-20),null,2);
+}catch(e){document.getElementById('status').textContent=e.message}}
+async function control(action){try{let r=await fetch('/api/'+action,{method:'POST',headers:{'X-Paper-Control':'1'}});let s=await r.json();document.getElementById('message').textContent=s.error||(action==='emergency'?'Halt latched. Virtual position will flatten on the next valid quote.':'Control applied');await refresh()}catch(e){document.getElementById('message').textContent=e.message}}
+refresh();setInterval(refresh,5000);
+</script></html>

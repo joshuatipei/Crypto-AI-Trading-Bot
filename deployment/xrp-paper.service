@@ -1,0 +1,23 @@
+# Example only: adjust paths and create unprivileged xrp-paper user first.
+[Unit]
+Description=XRP spot paper desk (no live execution)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=xrp-paper
+Group=xrp-paper
+WorkingDirectory=/opt/xrp-paper
+EnvironmentFile=/etc/xrp-paper/dashboard.env
+ExecStart=/opt/xrp-paper/.venv/bin/xrpbot serve --state /var/lib/xrp-paper/paper.sqlite --paper-csv /var/lib/xrp-paper/xrp-1m.csv --exchange coinbase
+Restart=on-failure
+RestartSec=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/xrp-paper
+
+[Install]
+WantedBy=multi-user.target
